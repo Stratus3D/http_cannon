@@ -1,0 +1,13 @@
+{application, http_cannon, [
+	{description, ""},
+	{vsn, "0.1.0"},
+	{id, "git"},
+	{modules, []},
+	{registered, []},
+	{applications, [
+		kernel,
+		stdlib
+	]},
+	{mod, {http_cannon_app, []}},
+	{env, []}
+]}.
