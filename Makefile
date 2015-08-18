@@ -1,5 +1,7 @@
 PROJECT = http_cannon
 
+ERLC_OPTS= +'{parse_transform, lager_transform}'
+
 #-D_REENTRANT=PTHREADS
 CFLAGS = "-I$(LUA)/include/"
 LDFLAGS = "-L$(LUA)/lib -llua -lm -ldl"
