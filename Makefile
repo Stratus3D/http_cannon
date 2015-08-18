@@ -9,4 +9,9 @@ LDFLAGS = "-L$(LUA)/lib -llua -lm -ldl"
 SHELL_OPTS = -s application start http_cannon
 #SHELL_PATH
 
+# Packages
+DEPS = lager
+
+dep_lager = git https://github.com/basho/lager.git 3.0.1
+
 include erlang.mk
