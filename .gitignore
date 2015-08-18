@@ -9,3 +9,4 @@ ebin/
 log/
 logs/
 doc/
+.erlang.mk/
