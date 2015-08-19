@@ -8,7 +8,7 @@ LDFLAGS = "-L$(LUA)/lib -llua -lm -ldl"
 
 # Options for the shell command in development
 #SHELL_DEPS
-SHELL_OPTS = -s application start http_cannon
+SHELL_OPTS = -s application ensure_all_started http_cannon
 #SHELL_PATH
 
 # Packages
