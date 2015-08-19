@@ -14,7 +14,9 @@
          code_change/3]).
 
 -record(state, {
-            port
+          id,
+          port,
+          mbox
          }).
 
 %%%===================================================================
@@ -48,10 +50,27 @@ start_link() ->
 %%--------------------------------------------------------------------
 init([]) ->
     process_flag(trap_exit, true),
-    Command = "c_src/lua_enode.o",
-    Port = open_port({spawn, Command}, [stream, {line, 100}, stderr_to_stdout, exit_status]),
-    io:format("Starting Lua VM...~n"),
-    wait_for_startup(#state{port=Port}).
+    Id = random_test,
+    Tracelevel = 1,
+    {Clean_Id, Host, Lua_Node_Name} = mk_node_name(Id),
+    Path = case code:priv_dir(http_cannon) of
+        {error, bad_name} -> os:getenv("PATH");
+        Folder -> Folder
+    end,
+    Command = "http_cannon.so",
+    lager:info("Starting Lua VM..."),
+
+    lager:info("path = ~s", [Path]),
+    case os:find_executable(Command, Path) of
+        false ->
+            lager:info("Lua command not found", []),
+            {stop, lua_not_found};
+        Lua ->
+            lager:info("Lua: ~w", [Lua]),
+            Cmd =  mk_cmdline(Lua, Clean_Id, Host, Tracelevel),
+            Port = open_port({spawn, Cmd}, [stream, {line, 100}, stderr_to_stdout, exit_status]),
+            wait_for_startup(#state{id=Id, port=Port, mbox={lua, Lua_Node_Name}})
+    end.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -132,14 +151,43 @@ code_change(_OldVsn, State, _Extra) ->
 wait_for_startup(#state{port=Port} = State) ->
     receive
         {Port, {exit_status, N}} ->
-            %?LOG_ERROR(wait_for_startup, [{startup_failure, {exit_status, N}}, State]),
+            lager:error("error: ~w, state: ~w", [{exit_status, N}, State]),
             {stop, {exit_status, N}};
         {Port, {data, {eol, "READY"}}} ->
-            %?LOG_INFO(wait_for_startup, [ready, State]),
+            lager:info("status: ~w, state: ~w", [ready, State]),
             {ok, State};
         {Port, {data, {eol, "."}}} ->
             wait_for_startup(State);
-        {Port, {data, {eol, _S}}} ->
-            %?LOG_DEBUG(wait_for_startup, [{startup, S}, State]),
-            wait_for_startup(State)
+        {Port, {data, {eol, S}}} ->
+            lager:info("status: ~w, state: ~w", [{startup, S}, State]),
+            wait_for_startup(State);
+        Err ->
+            lager:error("some must have really gone wrong: ~w", [Err])
+    end.
+
+mk_node_name(Id) ->
+    This_Id = atom_to_list(Id),
+    This_Host = string:sub_word(atom_to_list(node()), 2, $@),
+    {This_Id, This_Host, list_to_atom(lists:flatten([This_Id, "@", This_Host]))}.
+
+mk_cmdline(Lua, Id, Host, Tracelevel) ->
+    lists:flatten([
+        Lua,
+        quote(Id),
+        quote(Host),
+        quote(atom_to_list(node())),
+        quote(atom_to_list(erlang:get_cookie())),
+        quote(integer_to_list(Tracelevel))
+    ]).
+
+quote(S) ->
+    case ostype() of
+        win32 -> [" \"", S, "\""];
+        unix -> [" '", S, "'"]
+    end.
+
+ostype() ->
+    case os:type() of
+        {Type, _} -> Type;
+        Type -> Type
     end.
