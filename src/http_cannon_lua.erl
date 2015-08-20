@@ -60,13 +60,12 @@ init([]) ->
     Command = "http_cannon.so",
     lager:info("Starting Lua VM..."),
 
-    lager:info("path = ~s", [Path]),
     case os:find_executable(Command, Path) of
         false ->
             lager:info("Lua command not found", []),
             {stop, lua_not_found};
         Lua ->
-            lager:info("Lua: ~w", [Lua]),
+            lager:info("Lua ~s location: ~s", [Command, Lua]),
             Cmd =  mk_cmdline(Lua, Clean_Id, Host, Tracelevel),
             Port = open_port({spawn, Cmd}, [stream, {line, 100}, stderr_to_stdout, exit_status]),
             wait_for_startup(#state{id=Id, port=Port, mbox={lua, Lua_Node_Name}})
